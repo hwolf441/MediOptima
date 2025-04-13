@@ -33,6 +33,10 @@ namespace Persistence
                 .HasForeignKey(c => c.ResponseToId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            builder.Entity<Patient>()
+                 .HasIndex(p => p.IdNumber)
+                 .IsUnique();
+
         }
     }
 }

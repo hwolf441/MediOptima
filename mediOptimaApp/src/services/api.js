@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as signalR from "@microsoft/signalr";
+
 
 // Create axios instance with base config
 const apiClient = axios.create({
@@ -56,23 +56,29 @@ export const staffApi = {
 
 // Patient API endpoints
 export const patientApi = {
-  getPatientQueue: () => apiClient.get('/patients/queue'),
-  registerPatient: (patientData) => apiClient.post('/patients', patientData),
+  getPatientQueue: () => apiClient.get('/api/queue'),
+  registerPatient: (patientData) => apiClient.post('/api/reception/registerpatient', patientData),
   getPatientHistory: (patientId) => apiClient.get(`/patients/${patientId}/history`),
   // Doctor-specific endpoints
   getDoctorStats: () => apiClient.get('/patients/stats/doctor'),
   saveDiagnosis: (diagnosisData) => apiClient.post('/api/doctor/medicalRecord', diagnosisData),
-  assignPatient: (patientId, doctorId) => 
-    apiClient.post('/patients/assign', { patientId, doctorId }),
+  assignPatient: (combinedIds) => 
+    apiClient.patch('/api/doctor/assignDoctor',combinedIds),
 };
 
 // Dashboard API endpoints
 export const dashboardApi = {
-  getAdminStats: () => apiClient.get('/dashboard/admin'),
-  getDoctorStats: () => apiClient.get('/dashboard/doctor'),
-  getReceptionStats: () => apiClient.get('/dashboard/reception'),
+  getDoctorStats: (staffId) => apiClient.get(`/api/patientStatus/doctor/${staffId}`),
+  getReceptionStats: () => apiClient.get('/api/patientStatus/daily'),
+  getRecentPatients: () => apiClient.get('/api/patientStatus/weekly'),
   getProcurementStats: () => apiClient.get('/dashboard/procurement'),
 };
+
+// Geting user profiles to display in the dashboard
+export const userApi = {
+  getCurrentUser:()=> apiClient.get('/api/user'),
+   
+  };
 
 // Inventory API endpoints for meds in the procurement department
 export const inventoryApi = {
@@ -91,38 +97,7 @@ export const chatApi = {
   getContextHistory: (context) => apiClient.get(`/chat/history/${context}`),
 };
 
-// SignalR configuration (for real-time updates)
-export const configureSignalR = (token) => {
-  const connection = new signalR.HubConnectionBuilder()
-    .withUrl(`${apiClient.defaults.baseURL}/queueHub`, {
-      accessTokenFactory: () => token
-    })
-    .configureLogging(signalR.LogLevel.Information)
-    .build();
 
-  return {
-    connection,
-    start: async () => {
-      try {
-        await connection.start();
-        console.log("SignalR Connected");
-        return true;
-      } catch (err) {
-        console.error("SignalR Connection Error: ", err);
-        return false;
-      }
-    },
-    subscribeToQueueUpdates: (callback) => {
-      connection.on("UpdateQueue", callback);
-    },
-    subscribeToPatientAssignment: (callback) => {
-      connection.on("PatientAssigned", callback);
-    },
-    assignPatient: (patientId, doctorId) => {
-      return connection.invoke("AssignPatient", patientId, doctorId);
-    }
-  };
-};
 
 // Export the base client for custom requests
 export default apiClient;

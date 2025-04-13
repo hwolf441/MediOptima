@@ -13,3 +13,4 @@ C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Persistence\obj\Debug\net9.0\Pe
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Persistence\obj\Debug\net9.0\refint\Persistence.dll
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Persistence\obj\Debug\net9.0\Persistence.pdb
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Persistence\obj\Debug\net9.0\ref\Persistence.dll
+C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Persistence\obj\Debug\net9.0\Persistence.sourcelink.json

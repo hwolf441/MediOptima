@@ -281,3 +281,4 @@ C:\Users\Stephen MurimaTharua\Desktop\MediOptima\API\obj\Debug\net9.0\refint\API
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\API\obj\Debug\net9.0\API.pdb
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\API\obj\Debug\net9.0\API.genruntimeconfig.cache
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\API\obj\Debug\net9.0\ref\API.dll
+C:\Users\Stephen MurimaTharua\Desktop\MediOptima\API\obj\Debug\net9.0\API.sourcelink.json

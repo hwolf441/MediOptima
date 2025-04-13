@@ -78,8 +78,7 @@ namespace API
              services.AddAuthorization(options =>
            {
               options.AddPolicy("AdminPolicy", policy => policy.RequireClaim("Role", "ADMIN"));
-              options.AddPolicy("DoctorPolicy",  policy => policy.RequireClaim("Role", "DOCTOR"));
-              options.AddPolicy("DoctorPolicy", policy => policy.RequireClaim("Role", "CLINICIAN"));
+              options.AddPolicy("DoctorPolicy",  policy => policy.RequireClaim("Role", "DOCTOR","CLINICIAN"));
               options.AddPolicy("ReceptionistPolicy", policy => policy.RequireClaim("Role", "RECEPTIONIST"));
               options.AddPolicy("ProcurementPolicy", policy => policy.RequireClaim("Role", "PROCUREMENT"));
    
@@ -91,6 +90,7 @@ namespace API
             services.AddScoped <IUserAccesor, UserAccessor>();
             services.AddScoped<IBotService, BotService>();
             services.AddScoped<IQueueService, QueueService>();
+            services.AddScoped<IPatientStatusService, PatientStatusService>();
             
           
             services.AddDbContext<DataContext>(options =>

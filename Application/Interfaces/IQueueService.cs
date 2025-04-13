@@ -9,7 +9,8 @@ namespace Application.Interfaces
     public interface IQueueService
     {
         Task AddPatientToQueue(Patient patient);
-        Task NotifyQueueUpdate();
+        Task<object[]> GetOrderedQueue();
+        
     }
 
 

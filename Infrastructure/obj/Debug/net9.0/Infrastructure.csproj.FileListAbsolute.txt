@@ -17,3 +17,4 @@ C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Infrastructure\obj\Debug\net9.0
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Infrastructure\obj\Debug\net9.0\refint\Infrastructure.dll
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Infrastructure\obj\Debug\net9.0\Infrastructure.pdb
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Infrastructure\obj\Debug\net9.0\ref\Infrastructure.dll
+C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Infrastructure\obj\Debug\net9.0\Infrastructure.sourcelink.json

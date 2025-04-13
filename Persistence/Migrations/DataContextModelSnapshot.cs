@@ -211,6 +211,9 @@ namespace Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IdNumber")
+                        .IsUnique();
+
                     b.ToTable("Patients");
                 });
 
@@ -224,6 +227,9 @@ namespace Persistence.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("FullName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PatientId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PatientStatus")

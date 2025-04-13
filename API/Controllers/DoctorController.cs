@@ -35,5 +35,16 @@ namespace API.Controllers
             return await _mediator.Send(command);
         }
 
+       [HttpPatch("assignDoctor")]
+        public async Task<ActionResult<Unit>> AssigningPatientToDoctor( AssignPatientToDoctor.Command command  )
+        {
+         
+            return await _mediator.Send(command);
+        }
+     //    [HttpGet]
+     //  public async Task<ActionResult<List<PatientDto>>> AllBlogs()
+     //  {
+     //   return await _mediator.Send(new Blogs.Query());
+     //  } 
     }
 }

@@ -58,10 +58,9 @@ namespace Application.Users
                         Role= user.Role,
                         StaffId = user.StaffId,
                         PhoneNumber = user.PhoneNumber,
-                        Token = _jwtGenerator.CreateToken(user, Role),
                         Username = user.UserName,
                         Email = user.Email,
-                        IsActive = user.IsActive,
+                        
                        };
 
                      }

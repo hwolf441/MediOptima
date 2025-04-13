@@ -31,12 +31,11 @@ import {
 } from "@ant-design/icons";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "../../context/AuthContext";
-import { patientApi } from "../../services/api";
+import { patientApi,userApi } from "../../services/api";
 import { dashboardApi } from "../../services/api";
 import { toast } from "react-toastify";
-import moment from "moment";
 import Chart from "react-apexcharts";
 
 const { Header, Sider, Content } = Layout;
@@ -45,14 +44,16 @@ const { Option } = Select;
 
 export default function ReceptionistDashboard() {
   // Authentication and navigation
-  const { user, logout } = useAuth();
+  const { getRole, logout } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  
 
   // State management
   const [activeTab, setActiveTab] = useState("dashboard");
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [shouldFetch, setShouldFetch] = useState(false);
+  
 
   // Priority options
   const priorityOptions = [
@@ -64,14 +65,28 @@ export default function ReceptionistDashboard() {
 
   // Check receptionist role
   useEffect(() => {
-    if (user?.role !== "RECEPTIONIST") {
+    if (getRole() !== "RECEPTIONIST") {
       navigate("/unauthorized");
     }
-  }, [user, navigate]);
+  }, [getRole, navigate]);
 
-  // Data fetching with React Query - optimized version
+ // Fetch current user data
+ const { data: currentUser } = useQuery({
+  queryKey: ["gettingcurrentUser"],
+  queryFn: () => userApi.getCurrentUser(),
+  staleTime: 1000 * 60 * 60, // 1 hour
+  retry: false,
+  onError: (error) => {
+    console.error('Failed to fetch user data:', error);
+  }
+});
+
+
+
+
+  // Data fetching with React Query 
   const {
-    data: stats = {
+    data: statistics = {
       total: 0,
       waiting: 0,
       inProgress: 0,
@@ -81,9 +96,8 @@ export default function ReceptionistDashboard() {
   } = useQuery({
     queryKey: ["receptionistStats"],
     queryFn: () => dashboardApi.getReceptionStats(),
-    refetchInterval: 30000, // Auto-refresh every 30 seconds
-    retry: 2, // Retry failed requests twice (default: 3)
-    staleTime: 10000, // Consider data fresh for 10 seconds (default: 0)
+    enabled: shouldFetch, // Only fetch when shouldFetch is true
+    staleTime: Infinity, // Never stale 
     onError: (error) => {
       toast.error(error.message || "Failed to fetch reception stats");
     },
@@ -91,9 +105,9 @@ export default function ReceptionistDashboard() {
 
   const { data: patients = [], isLoading: isLoadingPatients } = useQuery({
     queryKey: ["recentPatients"],
-    queryFn: () => patientApi.getRecentPatients(),
-    staleTime: 10000, // Data stays fresh for 10 seconds
-    retry: 2, // Will retry failed requests 2 times
+    queryFn: () => dashboardApi.getRecentPatients(),
+    enabled: shouldFetch, // Only fetch when shouldFetch is true
+    staleTime: Infinity, // Never stale
     onError: (error) => {
       console.error("Recent patients fetch error:", error);
       toast.error(error.message || "Failed to load recent patients");
@@ -101,12 +115,15 @@ export default function ReceptionistDashboard() {
   });
   // Mutation for registering new patient
   const { mutate: registerPatient, isLoading: isRegistering } = useMutation({
-    mutationFn: (patientData) =>
-      patientApi.registerPatient({
+    mutationFn: (patientData) => {
+      const payload = {
         ...patientData,
-        registrationTime: moment().format("YYYY-MM-DD HH:mm:ss"),
-        status: "waiting",
-      }),
+
+        status: "waiting", // Default status
+      };
+
+      return patientApi.registerPatient(payload);
+    },
     onSuccess: () => {
       notification.success({
         message: "Patient registered successfully!",
@@ -114,8 +131,8 @@ export default function ReceptionistDashboard() {
       });
       form.resetFields();
       setActiveTab("dashboard");
-      queryClient.invalidateQueries(["receptionistStats"]);
-      queryClient.invalidateQueries(["recentPatients"]);
+       // Trigger data refresh after successful submission
+       setShouldFetch(true);
     },
     onError: (error) => {
       notification.error({
@@ -126,23 +143,27 @@ export default function ReceptionistDashboard() {
     },
   });
 
-  const handleLogout = async () => {
-    Modal.confirm({
-      title: "Confirm Logout",
-      icon: <ExclamationCircleOutlined />,
-      content: "Are you sure you want to logout?",
-      okText: "Logout",
-      cancelText: "Cancel",
-      onOk: async () => {
-        await logout();
-        notification.success({
-          message: "Logged out successfully",
-          placement: "topRight",
-        });
-        navigate("/");
-      },
-    });
+  // Logout function
+ const handleLogout = async () => {
+    try {
+      await logout();
+      notification.success({
+        message: "Logged out successfully!",
+        description: "You have been securely signed out.",
+        duration: 2,
+        placement: "topRight",
+        onClose: () => navigate("/", { replace: true }),
+      });
+    } catch (error) {
+      notification.error({
+        message: "Logout failed",
+        description: error.message,
+        duration: 4,
+        placement: "topRight",
+      });
+    }
   };
+  
 
   const showProfileModal = () => {
     setIsModalVisible(true);
@@ -151,7 +172,7 @@ export default function ReceptionistDashboard() {
   const handleModalCancel = () => {
     setIsModalVisible(false);
   };
-
+  
   // Chart data
   const chartOptions = {
     chart: {
@@ -195,69 +216,11 @@ export default function ReceptionistDashboard() {
   const chartSeries = [
     {
       name: "Patients",
-      data: stats.weeklyData || [0, 0, 0, 0, 0, 0, 0],
+      data: patients.dailyTotals || [0, 0, 0, 0, 0, 0, 0],
     },
   ];
 
-  // Table columns
-  const columns = [
-    {
-      title: "Patient Name",
-      dataIndex: "fullName",
-      key: "name",
-      render: (text) => <Text strong>{text}</Text>,
-    },
-    {
-      title: "ID Number",
-      dataIndex: "idNumber",
-      key: "id",
-    },
-    {
-      title: "Status",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag
-          color={
-            status === "waiting"
-              ? "orange"
-              : status === "in-progress"
-              ? "blue"
-              : "green"
-          }
-        >
-          {status.toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: "Priority",
-      dataIndex: "priority",
-      key: "priority",
-      render: (priority) => (
-        <Tag
-          color={
-            priority === "urgent"
-              ? "orange"
-              : priority === "emergency"
-              ? "red"
-              : priority === "vip"
-              ? "purple"
-              : "blue"
-          }
-        >
-          {priority.toUpperCase()}
-        </Tag>
-      ),
-    },
-    {
-      title: "Registration Time",
-      dataIndex: "registrationTime",
-      key: "registrationTime",
-      render: (time) => moment(time).format("LLL"),
-    },
-  ];
-
+ 
   if (isLoading || isLoadingPatients) {
     return (
       <div
@@ -297,7 +260,7 @@ export default function ReceptionistDashboard() {
           }}
         >
           <Title level={4} style={{ margin: 0, color: "#6366F1" }}>
-            MediOptima
+            Sanusvelle
           </Title>
         </div>
 
@@ -309,7 +272,7 @@ export default function ReceptionistDashboard() {
               icon={<UserOutlined />}
             />
             <div style={{ marginLeft: "12px" }}>
-              <Text strong>{user?.fullName?.split(" ")[0]}</Text>
+              <Text strong>{currentUser?.fullName?.split(" ")[0] || 'User'}</Text>
               <Text
                 type="secondary"
                 style={{ display: "block", fontSize: "12px" }}
@@ -375,7 +338,9 @@ export default function ReceptionistDashboard() {
                   <Menu.Item
                     key="logout"
                     icon={<LogoutOutlined />}
-                    onClick={handleLogout}
+                    onClick={() => {
+                     handleLogout(); 
+                    }}
                     danger
                   >
                     Logout
@@ -402,7 +367,7 @@ export default function ReceptionistDashboard() {
                   <Card bordered={false} style={{ borderRadius: "12px" }}>
                     <Statistic
                       title="Total Patients Today"
-                      value={stats.total}
+                      value={statistics.total}
                       prefix={<TeamOutlined />}
                       valueStyle={{ color: "#6366F1", fontSize: "28px" }}
                     />
@@ -412,7 +377,7 @@ export default function ReceptionistDashboard() {
                   <Card bordered={false} style={{ borderRadius: "12px" }}>
                     <Statistic
                       title="Waiting"
-                      value={stats.waiting}
+                      value={statistics.waiting}
                       prefix={<ClockCircleOutlined />}
                       valueStyle={{ color: "#F59E0B", fontSize: "28px" }}
                     />
@@ -422,7 +387,7 @@ export default function ReceptionistDashboard() {
                   <Card bordered={false} style={{ borderRadius: "12px" }}>
                     <Statistic
                       title="In Progress"
-                      value={stats.inProgress}
+                      value={statistics.inProgress}
                       prefix={<FileDoneOutlined />}
                       valueStyle={{ color: "#3B82F6", fontSize: "28px" }}
                     />
@@ -432,7 +397,7 @@ export default function ReceptionistDashboard() {
                   <Card bordered={false} style={{ borderRadius: "12px" }}>
                     <Statistic
                       title="Completed"
-                      value={stats.completed}
+                      value={statistics.completed}
                       prefix={<CheckCircleOutlined />}
                       valueStyle={{ color: "#10B981", fontSize: "28px" }}
                     />
@@ -456,27 +421,6 @@ export default function ReceptionistDashboard() {
                       series={chartSeries}
                       type="bar"
                       height={350}
-                    />
-                  </Card>
-                </Col>
-              </Row>
-
-              <Row style={{ marginTop: 24 }}>
-                <Col span={24}>
-                  <Card
-                    title={
-                      <span style={{ fontWeight: 500 }}>Recent Patients</span>
-                    }
-                    bordered={false}
-                    style={{ borderRadius: "12px" }}
-                    extra={<Button type="primary">Export Data</Button>}
-                  >
-                    <Table
-                      columns={columns}
-                      dataSource={patients}
-                      pagination={{ pageSize: 5 }}
-                      loading={isLoadingPatients}
-                      rowKey="id"
                     />
                   </Card>
                 </Col>
@@ -618,6 +562,61 @@ export default function ReceptionistDashboard() {
                   </Col>
                 </Row>
 
+                {/* New Row for Age and Sex */}
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Age"
+                      name="age"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Please enter patient's age",
+                        },
+                        {
+                          pattern: new RegExp(/^[0-9]{1,3}$/),
+                          message: "Please enter a valid age (1-120)",
+                        },
+                        () => ({
+                          validator(_, value) {
+                            if (!value || (value > 0 && value < 121)) {
+                              return Promise.resolve();
+                            }
+                            return Promise.reject(
+                              new Error("Age must be between 1-120")
+                            );
+                          },
+                        }),
+                      ]}
+                    >
+                      <Input
+                        placeholder="Patient's age"
+                        size="large"
+                        style={{ borderRadius: "6px" }}
+                        type="number"
+                        min={1}
+                        max={120}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Sex"
+                      name="sex"
+                      rules={[{ required: true, message: "Please select sex" }]}
+                    >
+                      <Select
+                        size="large"
+                        style={{ borderRadius: "6px" }}
+                        placeholder="Select sex"
+                      >
+                        <Option value="Male">Male</Option>
+                        <Option value="Female">Female</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                </Row>
+
                 <Form.Item>
                   <Button
                     type="primary"
@@ -646,10 +645,10 @@ export default function ReceptionistDashboard() {
         </Content>
       </Layout>
 
-      {/* Profile Modal */}
-      <Modal
+     {/* Profile Modal */}
+     <Modal
         title="User Profile"
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={handleModalCancel}
         footer={[
           <Button
@@ -661,20 +660,38 @@ export default function ReceptionistDashboard() {
           </Button>,
         ]}
       >
-        <div style={{ marginBottom: "16px" }}>
-          <Text strong>Name:</Text>
-          <Text style={{ display: "block" }}>{user?.fullName}</Text>
-        </div>
-        <div style={{ marginBottom: "16px" }}>
-          <Text strong>Role:</Text>
-          <Text style={{ display: "block" }}>
-            <Tag color="blue">Receptionist</Tag>
-          </Text>
-        </div>
-        <div>
-          <Text strong>Email:</Text>
-          <Text style={{ display: "block" }}>{user?.email}</Text>
-        </div>
+        {currentUser ? (
+          <div>
+            <div style={{ marginBottom: "16px" }}>
+              <Text strong>Full Name:</Text>
+              <Text style={{ display: "block" }}>{currentUser.fullName}</Text>
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <Text strong>Staff ID:</Text>
+              <Text style={{ display: "block" }}>{currentUser.staffId}</Text>
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <Text strong>Role:</Text>
+              <Text style={{ display: "block" }}>
+                <Tag color="blue">{currentUser.role}</Tag>
+              </Text>
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <Text strong>Phone Number:</Text>
+              <Text style={{ display: "block" }}>{currentUser.phoneNumber}</Text>
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <Text strong>Username:</Text>
+              <Text style={{ display: "block" }}>{currentUser.username}</Text>
+            </div>
+            <div>
+              <Text strong>Email:</Text>
+              <Text style={{ display: "block" }}>{currentUser.email}</Text>
+            </div>
+          </div>
+        ) : (
+          <Spin />
+        )}
       </Modal>
     </Layout>
   );

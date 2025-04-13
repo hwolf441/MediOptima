@@ -18,8 +18,8 @@ namespace API.Controllers
             _mediator = mediator;
         }
 
-         [HttpPost("register")]
-        public async Task<ActionResult<Unit>>Register(Register.Command command)
+         [HttpPost("registerpatient")]
+        public async Task<ActionResult<Unit>>RegisterPatient(Register.Command command)
         {
             return await _mediator.Send(command);
         } 

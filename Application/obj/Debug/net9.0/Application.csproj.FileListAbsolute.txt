@@ -15,3 +15,4 @@ C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Application\obj\Debug\net9.0\Ap
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Application\obj\Debug\net9.0\refint\Application.dll
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Application\obj\Debug\net9.0\Application.pdb
 C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Application\obj\Debug\net9.0\ref\Application.dll
+C:\Users\Stephen MurimaTharua\Desktop\MediOptima\Application\obj\Debug\net9.0\Application.sourcelink.json
